@@ -94,5 +94,5 @@ ________________________________________
 •	They keep it simple and focused <br>
 •	They explain their thinking clearly <br>
 •	They use AI intentionally, not just because they can <br>
-•	They design for impact, not complexity 
-[title](https://help.devpost.com/article/193-markdown-tips?_gl=1*twx6qf*_gcl_au*Njk1MTIxNTMuMTc3NzM4MzQ0OQ..*_ga*MTc2MjU2Njg5OS4xNzc3MzgzNDUw*_ga_0YHJK3Y10M*czE3ODE3NTg4NDQkbzM2JGcxJHQxNzgxNzU5MDA4JGoxNiRsMCRoMA..#Adding-Markdown-to-your-project-description-jpj7m)
+•	They design for impact, not complexity <br>
+[Adding Markdown and LaTeX to your project description](https://help.devpost.com/article/193-markdown-tips?_gl=1*twx6qf*_gcl_au*Njk1MTIxNTMuMTc3NzM4MzQ0OQ..*_ga*MTc2MjU2Njg5OS4xNzc3MzgzNDUw*_ga_0YHJK3Y10M*czE3ODE3NTg4NDQkbzM2JGcxJHQxNzgxNzU5MDA4JGoxNiRsMCRoMA..#Adding-Markdown-to-your-project-description-jpj7m)
