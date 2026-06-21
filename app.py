@@ -164,13 +164,18 @@ elif page == "🔎 Classify HS Code":
                         f'<span class="hs-code">{result.get("hs_code", "—")}</span>',
                         unsafe_allow_html=True,
                     )
-                    st.markdown(f"**{result.get('description', '')}**")
                 with col_conf:
                     st.markdown(
                         f'<span class="{badge_class}">{confidence_label}</span>',
                         unsafe_allow_html=True,
                     )
 
+                if result.get("description"):
+                    st.markdown(f"**{result['description']}**")
+
+                st.divider()
+
+                st.markdown("**Reasoning**")
                 st.markdown(result.get("reasoning", ""))
 
                 if result.get("gri_rule"):
@@ -178,8 +183,9 @@ elif page == "🔎 Classify HS Code":
 
                 questions = result.get("questions", [])
                 if questions:
+                    st.markdown("**Clarifying questions before finalising:**")
                     st.markdown(
-                        '<div class="caution-box">⚠️ <strong>Clarifying questions before finalising:</strong><ul>'
+                        '<div class="caution-box"><ul>'
                         + "".join(f"<li>{q}</li>" for q in questions)
                         + "</ul></div>",
                         unsafe_allow_html=True,
@@ -188,13 +194,13 @@ elif page == "🔎 Classify HS Code":
                 sources = result.get("sources", [])
                 links = result.get("links_to_sources", [])
                 if sources:
-                    with st.expander("📚 Sources"):
-                        for i, src in enumerate(sources):
-                            link = links[i] if i < len(links) else None
-                            if link:
-                                st.markdown(f"- [{src}]({link})")
-                            else:
-                                st.markdown(f"- {src}")
+                    st.markdown("**Sources**")
+                    for i, src in enumerate(sources):
+                        link = links[i] if i < len(links) and links[i] else None
+                        if link:
+                            st.markdown(f"- [{src}]({link})")
+                        else:
+                            st.markdown(f"- {src}")
 
                 st.divider()
                 if st.button("Use this code → Generate Invoice", type="secondary"):

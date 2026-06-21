@@ -20,37 +20,36 @@ import json
 import time
 from google import genai
 from google.genai import types
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 MODEL_NAME = "gemini-3.1-flash-lite"
 
 
 class TradeComplianceResponse(BaseModel):
-    hs_code: str
-    description: str
-    confidence_level: str
-    reasoning: str
-    questions: list[str]
-    gri_rule: str
-    sources: list[str]
-    links_to_sources: list[str]
+    hs_code: str = Field(description="The 6-digit HS code for the product, e.g. '6109.10'")
+    description: str = Field(description="The official WCO description of this HS heading/subheading, as it appears in the tariff schedule")
+    confidence_level: str = Field(description="Your confidence in this classification, expressed as a number out of 100, e.g. '92/100'")
+    reasoning: str = Field(description="2-4 sentences explaining why this HS code applies, referencing the product's material, function, or GRI rules used")
+    questions: list[str] = Field(description="List of clarifying questions needed to confirm the classification. Empty list if confidence is 80% or above and no ambiguity exists.")
+    gri_rule: str = Field(description="The specific WCO General Rule of Interpretation (GRI) applied, e.g. 'GRI 1 — classification by heading text' or 'GRI 3(b) — essential character'")
+    sources: list[str] = Field(description="List of authoritative sources consulted, e.g. 'WCO HS Nomenclature 2022, Chapter 61 Notes', 'US HTS Schedule B'")
+    links_to_sources: list[str] = Field(description="Direct URLs to the sources listed above. Use empty string if no URL is available for a source.")
 
 
 _CLASSIFY_CONFIG = types.GenerateContentConfig(
     system_instruction=(
-        "You are a trade compliance expert. "
-        "Rules: 1. Never guess. "
-        "2. Ask questions if information is insufficient. "
-        "3. Be concise and direct in your responses. "
-        "4. State confidence level critically in your answers out of 100. "
-        "5. Provide sources for your information. "
-        "6. Explain your reasoning when providing an answer. "
-        "7. If confidence is below 80%, ask clarifying questions. "
-        "8. If no authoritative source is available, state that explicitly. "
-        "9. Ask only questions that are necessary to determine the 6-digit HS code. "
-        "10. Do not ask questions unrelated to classification. "
-        "11. Country of origin and destination should only be requested if they materially affect the answer. "
-        "12. Don't give the HS code or any important detail for any substance which is heavily regulated or prohibited."
+        "You are a trade compliance expert specialising in Harmonized System (HS) classification. "
+        "Rules: "
+        "1. Never guess — only classify when you have enough information. "
+        "2. Always populate every field in the response schema fully. "
+        "3. State confidence_level critically as a number out of 100, e.g. '88/100'. "
+        "4. Always name the GRI rule you applied in gri_rule. "
+        "5. Always cite at least one authoritative source (WCO, national tariff schedule, etc.) in sources. "
+        "6. Explain your reasoning clearly referencing the product's material, function, or use. "
+        "7. If confidence is below 80%, include clarifying questions in the questions list. "
+        "8. Only ask questions necessary to determine the 6-digit HS code — nothing unrelated. "
+        "9. Request country of origin/destination only if it materially affects classification. "
+        "10. Do not classify heavily regulated or prohibited substances."
     ),
     temperature=0.1,
     response_mime_type="application/json",
