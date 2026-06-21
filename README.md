@@ -1,98 +1,77 @@
-# TradeEase
-First-time SME exporters in emerging markets lacking internal legal or customs teams.
-## Build a Winning AI Project
-> Use this canvas to guide how you design, build, and present your solution.
-The best teams don’t just build — they build with clarity, purpose, and impact.
-________________________________________
-### 1. Start with the Right Goal
-**What does a winning project look like?**
-- Solves a real problem clearly
-- Uses AI appropriately (not forced)
-- Is simple, focused, and usable
-- Shows clear thinking (not just code)
-- Demonstrates impact
-> *Key Reminder: Judges reward clarity + reasoning more than complexity.* 
-________________________________________
-### 2. Focus Your Scope
-- What is the ONE thing your project does really well?
-- What are you NOT building? (Winning teams say no to distractions)
-> *Tip: A simple solution done well beats a complex solution done poorly.*
-________________________________________
-### 3. Design Before You Build
-**Have you clearly defined:**
-- User
-- Problem
-- Solution
-- AI role Sentence one.<br> *If not, go back to your Problem Canvas. The best projects start with thinking, not coding.* 
-________________________________________
-### 4. Use AI the Right Way
-**What is AI doing in your project?**
-- Understanding (text, speech, images)
-- Predicting (classification, recommendations)
-- Generating (text, ideas, summaries)
-- Assisting decisions <br>
-- Why is AI necessary? <br>
-> **Red Flag: If your solution works the same without AI, rethink it.**
-________________________________________
-### 5. Build a Clear AI System
-**Describe your system simply:**
-Input → AI → Output <br>
-Input: <br>
-AI Processing: <br>
-Output: <br>
-*Judges should understand this in 10 seconds.*
-________________________________________
-### 6. Keep It Buildable
-**What version can you realistically complete?**
-- Prototype (no-code / low-code)
-- Demo with sample data
-- Simulated workflow <br>
-- What tools will you use? (e.g., ChatGPT, APIs, Figma, Glide, etc.) <br>
-You do **NOT** need a production app to win.
-________________________________________
-### 7. Create a Strong User Experience
-What is the user journey?
-<br> What makes it simple and intuitive? <br> If users are confused, judges will be too.
-________________________________________
-### 8. Show Responsible AI Thinking
-**What risks exist?**
-- Bias
-- Incorrect outputs
-- MisuseOver-reliance on AI
-How do you handle them? <br> **This is a scoring category — don’t skip it.**
-________________________________________
-### 9. Design Your Demo to Impress
-**What will you show?**
-- Problem clearly explaine
-- Solution walkthrough
-- AI in action
-- Example output
-What is your “wow moment”? <br> **The demo is often what judges remember most.**
-________________________________________
-### 10. Communicate Like a Winner
-**Can you clearly explain:**
-- Problem → Solution → AI → Impact <br>
-- Practice this: “We built [solution] to help [user] solve [problem] using AI by [how it works].” <br>
-**If you can’t explain it simply, it won’t score well.**
-________________________________________
-### 11. Show Real Impact
-**What changes because your solution exists?**
-- Who benefits and how?
-- Why does this matter?
-- Strong impact = strong scores.
-________________________________________
-### 12. Final Checklist (Before Submission)
-**Problem is clear and specific**
-- AI is used appropriately
-- Solution is simple and focused
-- Demo is clear and compelling
-- Risks are acknowledged
-- Impact is meaningful
-________________________________________
-### Final Advice (What Winning Teams Do Differently)
-•	They solve a real problem, not a “cool idea” <br>
-•	They keep it simple and focused <br>
-•	They explain their thinking clearly <br>
-•	They use AI intentionally, not just because they can <br>
-•	They design for impact, not complexity <br>
-[Adding Markdown and LaTeX to your project description](https://help.devpost.com/article/193-markdown-tips?_gl=1*twx6qf*_gcl_au*Njk1MTIxNTMuMTc3NzM4MzQ0OQ..*_ga*MTc2MjU2Njg5OS4xNzc3MzgzNDUw*_ga_0YHJK3Y10M*czE3ODE3NTg4NDQkbzM2JGcxJHQxNzgxNzU5MDA4JGoxNiRsMCRoMA..#Adding-Markdown-to-your-project-description-jpj7m)
+# TradeEase — Desktop GUI (PySide6)
+
+A 4-screen desktop app: **Home → Classify HS Code → Generate Invoice → Guidance & Mentor**,
+wired to the live Gemini API. Layout inspired by the reference image
+(icon sidebar, light main panel, card grid, chat-style input bar),
+colored with TradeEase's Ocean Gradient palette.
+
+## Setup (5 minutes)
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env
+# edit .env and paste your real Gemini key (free, from aistudio.google.com)
+python main.py
+```
+
+No key yet? The app still opens — every AI action just shows a clear
+"add your key" message instead of crashing. Good for UI demos before the
+backend is wired up.
+
+## How it's organized
+
+```
+main.py                 → app window, screen routing, loads the API key
+theme.py                → all colors/fonts/styles in ONE place
+gemini_client.py         → the only file that talks to Gemini
+widgets.py               → reusable pieces: sidebar, cards, mascot, worker thread
+landing_screen.py        → Home screen
+classification_screen.py → HS code classification flow
+invoice_screen.py        → Invoice generation flow
+mentor_screen.py         → Guidance & Mentor chat screen
+```
+
+Each screen is a self-contained `QWidget`. `main.py` just places them in a
+`QStackedWidget` and connects their signals — e.g. clicking "Use this code"
+on the classification result carries the product description + HS code
+into the invoice form automatically.
+
+## Suggested file ownership (matches how you've split the PRD)
+
+| File | Owner |
+|---|---|
+| `gemini_client.py`, `main.py` | Tech Lead |
+| `landing_screen.py`, `widgets.py` | Frontend Dev |
+| `classification_screen.py`, `invoice_screen.py`, `mentor_screen.py` | Frontend Dev + Tech Lead |
+| `theme.py`, copy/wording, demo flow | PM/UX Lead (you) |
+| Prompt testing in `gemini_client.py`, edge cases | Data & Testing Engineer |
+
+## Two concepts worth understanding (not just copying)
+
+**1. Why API calls run on a `QThread` (see `GeminiWorker` in `widgets.py`)**
+Calling Gemini directly inside a button's `clicked` handler freezes the
+whole window until the response arrives — the #1 beginner mistake with
+desktop apps + APIs. `GeminiWorker` runs the call on a background thread
+and emits a signal back to the UI when it's done, so the window stays
+responsive.
+
+**2. Why every AI response is forced into JSON with a "caution" field**
+Compliance is a domain where a confident-sounding wrong answer causes real
+harm. `gemini_client.py` always asks for a structured response that
+includes a human-in-the-loop caution line, and the UI always renders it —
+this is your hallucination-prevention guardrail, built into the prompt
+itself rather than bolted on later.
+
+## Known limitations (MVP scope, by design)
+
+- Classification gives one reasoning snippet, not a full action plan (matches your MVP scope decision).
+- Guidance & Mentor is a simple Q&A chat, not the full "action-plan generation" feature — same scope-discipline logic, applied to chat instead of a one-shot report.
+- Invoice export is plain `.txt`, not PDF — fastest path for the demo; swap in `reportlab` (also free) post-hackathon if you want a polished PDF.
+- "Compliance Tracker" card is a visible stub — shows judges you know what's MVP vs. roadmap.
+- Free-tier Gemini rate limits (~10-15 requests/min) — `gemini_client.py` retries with backoff automatically; if you still hit a 429 during a live demo, wait ~60 seconds.
+
+## Next steps
+
+- Swap in your real exact Ocean Gradient hex codes in `theme.py` if they differ from the placeholders here.
+- Replace the `🤖` mascot with your actual mascot illustration (just swap the emoji `QLabel` for a `QPixmap` in `widgets.py`).
+- Add a simple local history list (the "Coming Soon" card) once MVP demo is locked.
