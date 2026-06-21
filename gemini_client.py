@@ -19,8 +19,43 @@ import os
 import json
 import time
 from google import genai
+from google.genai import types
+from pydantic import BaseModel
 
 MODEL_NAME = "gemini-3.1-flash-lite"
+
+
+class TradeComplianceResponse(BaseModel):
+    hs_code: str
+    description: str
+    confidence_level: str
+    reasoning: str
+    questions: list[str]
+    gri_rule: str
+    sources: list[str]
+    links_to_sources: list[str]
+
+
+_CLASSIFY_CONFIG = types.GenerateContentConfig(
+    system_instruction=(
+        "You are a trade compliance expert. "
+        "Rules: 1. Never guess. "
+        "2. Ask questions if information is insufficient. "
+        "3. Be concise and direct in your responses. "
+        "4. State confidence level critically in your answers out of 100. "
+        "5. Provide sources for your information. "
+        "6. Explain your reasoning when providing an answer. "
+        "7. If confidence is below 80%, ask clarifying questions. "
+        "8. If no authoritative source is available, state that explicitly. "
+        "9. Ask only questions that are necessary to determine the 6-digit HS code. "
+        "10. Do not ask questions unrelated to classification. "
+        "11. Country of origin and destination should only be requested if they materially affect the answer. "
+        "12. Don't give the HS code or any important detail for any substance which is heavily regulated or prohibited."
+    ),
+    temperature=0.1,
+    response_mime_type="application/json",
+    response_schema=TradeComplianceResponse,
+)
 
 
 class GeminiClient:
@@ -36,23 +71,10 @@ class GeminiClient:
     # ---------- public API ----------
 
     def classify_hs_code(self, product_description: str, destination_country: str = "") -> dict:
-        prompt = f"""You are a trade compliance assistant helping a first-time SME exporter
-classify a product under the Harmonized System (HS) using WCO General Rules
-of Interpretation (GRI).
-
-Product description: {product_description}
-Destination country: {destination_country or "Not specified"}
-
-Respond with ONLY valid JSON (no markdown fences, no extra commentary) in
-exactly this shape:
-{{
-  "hs_code": "the HS code, at least 6 digits",
-  "code_description": "official-style description of this HS code",
-  "confidence": "High, Medium, or Low",
-  "reasoning": "2-3 plain-English sentences on why this code fits, referencing the product's material or function",
-  "caution": "one sentence flagging what the exporter should double-check with a licensed customs broker"
-}}"""
-        raw = self._call_with_retry(prompt)
+        prompt = f"Classify this product: {product_description}"
+        if destination_country:
+            prompt += f"\nDestination country: {destination_country}"
+        raw = self._call_with_retry(prompt, config=_CLASSIFY_CONFIG)
         return self._parse_json(raw)
 
     def generate_invoice(self, invoice_data: dict) -> dict:
@@ -99,7 +121,7 @@ Mentor:"""
         reply = raw.strip() if raw else "Sorry, I didn't catch that — could you rephrase?"
         return {"reply": reply}
 
-    def _call_with_retry(self, prompt: str, max_retries: int = 4) -> str:
+    def _call_with_retry(self, prompt: str, max_retries: int = 4, config=None) -> str:
         """Calls Gemini, retrying with exponential backoff on free-tier 429s."""
         wait_seconds = 2
         last_error = None
@@ -108,6 +130,7 @@ Mentor:"""
                 response = self.client.models.generate_content(
                     model=MODEL_NAME,
                     contents=prompt,
+                    config=config,
                 )
                 return response.text
             except Exception as e:

@@ -144,12 +144,16 @@ elif page == "🔎 Classify HS Code":
         if "error" in result:
             st.error("⚠️ " + result["error"])
         else:
-            confidence = result.get("confidence", "Medium")
-            badge_class = (
-                "confidence-high" if confidence == "High"
-                else "confidence-low" if confidence == "Low"
-                else "confidence-med"
-            )
+            confidence_str = result.get("confidence_level", "")
+            try:
+                confidence_num = int(confidence_str.split("/")[0])
+                badge_class = (
+                    "confidence-high" if confidence_num >= 80
+                    else "confidence-low" if confidence_num < 60
+                    else "confidence-med"
+                )
+            except (ValueError, IndexError):
+                badge_class = "confidence-med"
 
             with st.container(border=True):
                 col_code, col_conf = st.columns([3, 1])
@@ -158,20 +162,37 @@ elif page == "🔎 Classify HS Code":
                         f'<span class="hs-code">{result.get("hs_code", "—")}</span>',
                         unsafe_allow_html=True,
                     )
-                    st.markdown(f"**{result.get('code_description', '')}**")
+                    st.markdown(f"**{result.get('description', '')}**")
                 with col_conf:
                     st.markdown(
-                        f'<span class="{badge_class}">{confidence} confidence</span>',
+                        f'<span class="{badge_class}">{confidence_str} confidence</span>',
                         unsafe_allow_html=True,
                     )
 
                 st.markdown(result.get("reasoning", ""))
 
-                if result.get("caution"):
+                if result.get("gri_rule"):
+                    st.markdown(f"**GRI Rule applied:** {result['gri_rule']}")
+
+                questions = result.get("questions", [])
+                if questions:
                     st.markdown(
-                        f'<div class="caution-box">⚠️ {result["caution"]}</div>',
+                        '<div class="caution-box">⚠️ <strong>Clarifying questions before finalising:</strong><ul>'
+                        + "".join(f"<li>{q}</li>" for q in questions)
+                        + "</ul></div>",
                         unsafe_allow_html=True,
                     )
+
+                sources = result.get("sources", [])
+                links = result.get("links_to_sources", [])
+                if sources:
+                    with st.expander("📚 Sources"):
+                        for i, src in enumerate(sources):
+                            link = links[i] if i < len(links) else None
+                            if link:
+                                st.markdown(f"- [{src}]({link})")
+                            else:
+                                st.markdown(f"- {src}")
 
                 st.divider()
                 if st.button("Use this code → Generate Invoice", type="secondary"):
