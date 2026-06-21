@@ -152,8 +152,10 @@ elif page == "🔎 Classify HS Code":
                     else "confidence-low" if confidence_num < 60
                     else "confidence-med"
                 )
+                confidence_label = f"{confidence_str} confidence"
             except (ValueError, IndexError):
                 badge_class = "confidence-med"
+                confidence_label = confidence_str if confidence_str else "Medium confidence"
 
             with st.container(border=True):
                 col_code, col_conf = st.columns([3, 1])
@@ -165,7 +167,7 @@ elif page == "🔎 Classify HS Code":
                     st.markdown(f"**{result.get('description', '')}**")
                 with col_conf:
                     st.markdown(
-                        f'<span class="{badge_class}">{confidence_str} confidence</span>',
+                        f'<span class="{badge_class}">{confidence_label}</span>',
                         unsafe_allow_html=True,
                     )
 
