@@ -36,24 +36,19 @@ class TradeComplianceResponse(BaseModel):
     links_to_sources: list[str] = Field(description="Direct URLs to the sources listed above. Use empty string if no URL is available for a source.")
 
 
-_CLASSIFY_CONFIG = types.GenerateContentConfig(
-    system_instruction=(
-        "You are a trade compliance expert specialising in Harmonized System (HS) classification. "
-        "Rules: "
-        "1. Never guess — only classify when you have enough information. "
-        "2. Always populate every field in the response schema fully. "
-        "3. State confidence_level critically as a number out of 100, e.g. '88/100'. "
-        "4. Always name the GRI rule you applied in gri_rule. "
-        "5. Always cite at least one authoritative source (WCO, national tariff schedule, etc.) in sources. "
-        "6. Explain your reasoning clearly referencing the product's material, function, or use. "
-        "7. If confidence is below 80%, include clarifying questions in the questions list. "
-        "8. Only ask questions necessary to determine the 6-digit HS code — nothing unrelated. "
-        "9. Request country of origin/destination only if it materially affects classification. "
-        "10. Do not classify heavily regulated or prohibited substances."
-    ),
-    temperature=0.1,
-    response_mime_type="application/json",
-    response_schema=TradeComplianceResponse,
+_CLASSIFY_SYSTEM = (
+    "You are a trade compliance expert specialising in Harmonized System (HS) classification. "
+    "Rules: "
+    "1. Never guess — only classify when you have enough information. "
+    "2. Always populate EVERY field in the JSON response fully — never leave a field empty. "
+    "3. State confidence_level as X/100, e.g. '92/100'. "
+    "4. Always name the GRI rule applied in gri_rule. "
+    "5. Always cite at least one authoritative source in sources with its URL in links_to_sources. "
+    "6. Explain reasoning clearly referencing the product's material, function, or relevant GRI rule. "
+    "7. If confidence is below 80%, add clarifying questions to the questions list. "
+    "8. Only ask questions necessary to confirm the 6-digit HS code. "
+    "9. Request country of origin/destination only if it materially affects classification. "
+    "10. Do not classify heavily regulated or prohibited substances."
 )
 
 
@@ -70,10 +65,23 @@ class GeminiClient:
     # ---------- public API ----------
 
     def classify_hs_code(self, product_description: str, destination_country: str = "") -> dict:
-        prompt = f"Classify this product: {product_description}"
-        if destination_country:
-            prompt += f"\nDestination country: {destination_country}"
-        raw = self._call_with_retry(prompt, config=_CLASSIFY_CONFIG)
+        prompt = f"""{_CLASSIFY_SYSTEM}
+
+Product: {product_description}
+Destination: {destination_country or "Not specified"}
+
+Respond with ONLY valid JSON (no markdown, no extra text) in exactly this shape:
+{{
+  "hs_code": "6-digit HS code, e.g. 6109.10",
+  "description": "Official WCO description of this heading/subheading as it appears in the tariff schedule",
+  "confidence_level": "Your confidence as X/100, e.g. 95/100",
+  "reasoning": "2-4 sentences explaining why this HS code applies, referencing the product material, function, or GRI rule used",
+  "questions": ["clarifying question if confidence < 80%, else empty list"],
+  "gri_rule": "The specific GRI rule applied, e.g. GRI 1 — classification by heading text",
+  "sources": ["WCO HS Nomenclature 2022, Chapter 61 Notes", "US HTS Schedule B Chapter 61"],
+  "links_to_sources": ["https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2022-edition.aspx", "https://hts.usitc.gov/"]
+}}"""
+        raw = self._call_with_retry(prompt)
         return self._parse_json(raw)
 
     def generate_invoice(self, invoice_data: dict) -> dict:
